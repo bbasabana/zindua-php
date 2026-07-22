@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Zindua\Http;
 
 use Zindua\Exceptions\ZinduaException;
+use Zindua\WhatsappAntiBan;
 
 final class ApiClient
 {
-    private const SDK_VERSION = '1.0.0';
+    private const SDK_VERSION = '1.0.1';
 
     public function __construct(
         private readonly string $apiKey,
@@ -111,6 +112,14 @@ final class ApiClient
             : $message;
 
         $code = is_string($body['code'] ?? null) ? $body['code'] : 'API_ERROR';
+
+        if ($code === 'RATE_LIMIT_EXCEEDED' || $status === 429) {
+            $retry = isset($details['retryAfterSec']) && is_int($details['retryAfterSec'])
+                ? $details['retryAfterSec']
+                : null;
+            $fullMessage = WhatsappAntiBan::rateLimitMessage($message, $retry);
+            $details['antiBanGuide'] = WhatsappAntiBan::GUIDE_URL;
+        }
 
         return new ZinduaException(
             $fullMessage,

@@ -213,4 +213,49 @@ final class Validation
         }
         return $timeoutMs;
     }
+
+    public static function validateOptionalEmailField(string $field, ?string $value): ?string
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+        $trimmed = trim($value);
+        if (!preg_match(self::EMAIL_RE, $trimmed)) {
+            throw new ZinduaException("Invalid {$field} email address.", 0, 'INVALID_OPTIONS');
+        }
+        return $trimmed;
+    }
+
+    /**
+     * @param list<array{url: string, filename?: string}>|null $attachments
+     * @return list<array{url: string, filename?: string}>|null
+     */
+    public static function validateAttachments(?array $attachments): ?array
+    {
+        if ($attachments === null || $attachments === []) {
+            return null;
+        }
+        if (count($attachments) > 5) {
+            throw new ZinduaException('At most 5 attachments allowed.', 0, 'INVALID_OPTIONS');
+        }
+
+        $out = [];
+        foreach ($attachments as $item) {
+            if (!is_array($item) || !is_string($item['url'] ?? null) || trim($item['url']) === '') {
+                throw new ZinduaException('Each attachment must include a url.', 0, 'INVALID_OPTIONS');
+            }
+            $url = trim($item['url']);
+            $parsed = parse_url($url);
+            if ($parsed === false || ($parsed['scheme'] ?? '') !== 'https') {
+                throw new ZinduaException('Attachment urls must use HTTPS.', 0, 'INVALID_OPTIONS');
+            }
+            $entry = ['url' => $url];
+            if (isset($item['filename']) && is_string($item['filename']) && trim($item['filename']) !== '') {
+                $entry['filename'] = trim($item['filename']);
+            }
+            $out[] = $entry;
+        }
+
+        return $out;
+    }
 }

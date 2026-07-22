@@ -11,13 +11,16 @@ class Client
 {
     private readonly ApiClient $http;
     private readonly string $apiKey;
+    private readonly bool $autoPaceWhatsapp;
+    private float $lastWhatsappSendAt = 0.0;
 
     /**
      * @param array{
      *   apiKey: string,
      *   baseUrl?: string|null,
      *   timeoutMs?: int|null,
-     *   siteUrl?: string|null
+     *   siteUrl?: string|null,
+     *   autoPaceWhatsapp?: bool|null
      * } $options
      */
     public function __construct(array $options)
@@ -26,6 +29,7 @@ class Client
         $baseUrl = Validation::resolveBaseUrl($options['baseUrl'] ?? null);
         $timeoutMs = Validation::validateTimeoutMs($options['timeoutMs'] ?? null);
         $siteUrl = Validation::validateSiteUrl($options['siteUrl'] ?? null);
+        $this->autoPaceWhatsapp = ($options['autoPaceWhatsapp'] ?? true) !== false;
 
         $this->http = new ApiClient($this->apiKey, $baseUrl, $timeoutMs, $siteUrl);
     }
@@ -44,13 +48,18 @@ class Client
      *   variables?: array<string, string>|null,
      *   cc?: string|null,
      *   bcc?: string|null,
-     *   replyTo?: string|null
+     *   replyTo?: string|null,
+     *   attachments?: list<array{url: string, filename?: string}>|null
      * } $options
      * @return array<string, mixed>
      */
     public function send(array $options): array
     {
         $channel = Validation::validateChannel($options['channel'] ?? null);
+        if ($channel === 'whatsapp' && $this->autoPaceWhatsapp) {
+            $this->paceWhatsappSend();
+        }
+
         $to = Validation::validateRecipient($options['to'], $channel);
         $template = Validation::validateTemplateSlug($options['template']);
         $lang = Validation::validateLang($options['lang'] ?? null);
@@ -69,13 +78,52 @@ class Client
             $payload['variables'] = $variables;
         }
 
+        if ($channel === 'email') {
+            $cc = Validation::validateOptionalEmailField('cc', $options['cc'] ?? null);
+            $bcc = Validation::validateOptionalEmailField('bcc', $options['bcc'] ?? null);
+            $replyTo = Validation::validateOptionalEmailField('replyTo', $options['replyTo'] ?? null);
+            $attachments = Validation::validateAttachments($options['attachments'] ?? null);
+            if ($cc !== null) {
+                $payload['cc'] = $cc;
+            }
+            if ($bcc !== null) {
+                $payload['bcc'] = $bcc;
+            }
+            if ($replyTo !== null) {
+                $payload['replyTo'] = $replyTo;
+            }
+            if ($attachments !== null) {
+                $payload['attachments'] = $attachments;
+            }
+        }
+
         $data = $this->http->request('POST', 'send', $payload);
 
         if (($data['success'] ?? false) !== true || !is_string($data['logId'] ?? null)) {
             throw new ZinduaException('API response missing success or logId.', 200, 'INVALID_RESPONSE');
         }
 
+        if ($channel === 'whatsapp') {
+            $this->lastWhatsappSendAt = microtime(true);
+        }
+
         return $data;
+    }
+
+    private function paceWhatsappSend(): void
+    {
+        if ($this->lastWhatsappSendAt <= 0) {
+            return;
+        }
+
+        $elapsedMs = (microtime(true) - $this->lastWhatsappSendAt) * 1000;
+        if ($elapsedMs >= WhatsappAntiBan::MIN_INTERVAL_MS) {
+            return;
+        }
+
+        $waitMs = (int) ceil(WhatsappAntiBan::MIN_INTERVAL_MS - $elapsedMs);
+        WhatsappAntiBan::warnPace($waitMs);
+        usleep($waitMs * 1000);
     }
 
     /** @return array<string, mixed> */
