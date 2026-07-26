@@ -41,6 +41,54 @@ class Client
 
     /**
      * @param array{
+     *   to?: string,
+     *   userId?: string,
+     *   userExternalId?: string,
+     *   type?: string,
+     *   purpose?: string,
+     *   context?: array<string, mixed>,
+     *   channel?: string,
+     *   fallbackChannel?: string,
+     *   fallback?: array{channel?: string, to?: string},
+     *   ttlSeconds?: int
+     * } $options
+     * @return array<string, mixed>
+     */
+    public function createChallenge(array $options): array
+    {
+        return $this->http->request('POST', 'challenges', $options);
+    }
+
+    /** @return array<string, mixed> */
+    public function getChallenge(string $challengeId): array
+    {
+        return $this->http->request('GET', 'challenges/' . rawurlencode($challengeId));
+    }
+
+    /** @return array<string, mixed> */
+    public function respondChallenge(string $challengeId, string $value): array
+    {
+        return $this->http->request('POST', 'challenges/' . rawurlencode($challengeId) . '/respond', [
+            'value' => $value,
+        ]);
+    }
+
+    /**
+     * @param array{
+     *   userExternalId: string,
+     *   platform?: string,
+     *   pushToken?: string,
+     *   keys?: array<string, string>
+     * } $options
+     * @return array<string, mixed>
+     */
+    public function registerDevice(array $options): array
+    {
+        return $this->http->request('POST', 'devices', $options);
+    }
+
+    /**
+     * @param array{
      *   to: string,
      *   template: string,
      *   channel?: string|null,

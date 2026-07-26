@@ -64,18 +64,22 @@ $zindua->send([
 
 ### WhatsApp anti-ban robot (required)
 
-Zindua’s **anti-ban robot** paces WhatsApp OTP so burst traffic does not ban your linked number.
+Zindua’s **anti-ban Guardian** paces WhatsApp OTP so burst traffic does not ban your linked number.
 
-- Wait **≥ 3 seconds** between WhatsApp `send()` calls (same project).
-- By default the PHP SDK **auto-paces** (`autoPaceWhatsapp` => true) and logs a warning to `error_log`.
-- Prefer a Laravel queue / cache lock for production — do not fire parallel WhatsApp bursts.
+- Official PHP SDK cooperates with the Guardian automatically.
+- Prefer a Laravel queue / cache lock for production; never fire parallel WhatsApp bursts.
 
-Guide: [WhatsApp OTP anti-ban pacing](https://zindua.run/blog/whatsapp-otp-anti-ban-pacing)
+Guide: [WhatsApp anti-ban Guardian](https://zindua.run/whatsapp/anti-ban)
+
+### Upgrade (already installed?)
+
+```bash
+composer update zindua/sdk
+```
 
 ```php
 $zindua = new Client([
     'apiKey' => getenv('ZINDUA_API_KEY'),
-    // 'autoPaceWhatsapp' => false, // only if you already queue OTP yourself
 ]);
 ```
 

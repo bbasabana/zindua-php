@@ -9,7 +9,7 @@ use Zindua\WhatsappAntiBan;
 
 final class ApiClient
 {
-    private const SDK_VERSION = '1.0.1';
+    private const SDK_VERSION = '1.0.2';
 
     public function __construct(
         private readonly string $apiKey,

@@ -1,8 +1,9 @@
 {
   "name": "zindua/sdk",
-  "description": "Official Zindua SDK for PHP \u2014 transactional email and WhatsApp via POST /api/v1/send.",
+  "description": "Official Zindua SDK for PHP — transactional email and WhatsApp via POST /api/v1/send.",
   "type": "library",
   "license": "MIT",
+  "version": "1.0.2",
   "keywords": [
     "zindua",
     "email",
