@@ -97,7 +97,8 @@ class Client
      *   cc?: string|null,
      *   bcc?: string|null,
      *   replyTo?: string|null,
-     *   attachments?: list<array{url: string, filename?: string}>|null
+     *   attachments?: list<array{url: string, filename?: string}>|null,
+     *   validate?: bool|null
      * } $options
      * @return array<string, mixed>
      */
@@ -143,6 +144,9 @@ class Client
             if ($attachments !== null) {
                 $payload['attachments'] = $attachments;
             }
+            if (($options['validate'] ?? false) === true) {
+                $payload['validate'] = true;
+            }
         }
 
         $data = $this->http->request('POST', 'send', $payload);
@@ -172,6 +176,26 @@ class Client
         $waitMs = (int) ceil(WhatsappAntiBan::MIN_INTERVAL_MS - $elapsedMs);
         WhatsappAntiBan::warnPace($waitMs);
         usleep($waitMs * 1000);
+    }
+
+    /**
+     * Verify an email address (format, MX, disposable, typo suggestion).
+     *
+     * @return array<string, mixed>
+     */
+    public function verifyEmail(string $email): array
+    {
+        $email = trim($email);
+        if ($email === '') {
+            throw new ZinduaException('email is required.', 0, 'MISSING_FIELDS');
+        }
+
+        $data = $this->http->request('POST', 'email/verify', ['email' => $email]);
+        if (($data['ok'] ?? false) !== true || !is_string($data['email'] ?? null)) {
+            throw new ZinduaException('API response missing verify payload.', 200, 'INVALID_RESPONSE');
+        }
+
+        return $data;
     }
 
     /** @return array<string, mixed> */
